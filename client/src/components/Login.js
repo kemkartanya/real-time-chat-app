@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-// import axios from 'axios';
+import axios from 'axios';
 
 const Login = () => {
 
@@ -18,26 +18,26 @@ const Login = () => {
 
     console.log("login successful", userData);
 
-    // try {
-    //   const response = await axios.post(
-    //     'https://stg.dhunjam.in/account/admin/login',
-    //     formData // Pass the formData object directly
-    //   );
+    try {
+      const response = await axios.post(
+        'http://localhost:8000/auth/login',
+        userData // Pass the formData object directly
+      );
     
-    //   const data = await response.data
+      const data = await response.data
 
-    //   if (data) {
-    //     console.log(data);
-    //     sessionStorage.setItem('token', data.data.token)
-    //     sessionStorage.setItem('id', data.data.id)
-    //     window.location.href = '/dashboard'
-    //   } else {
-    //     alert('Please check your username and password')
-    //   }
+      if (data) {
+        console.log(data);
+        sessionStorage.setItem('token', data.token)
+        sessionStorage.setItem('id', data.data._id)
+        window.location.href = '/chat'
+      } else {
+        alert('Please check your username and password')
+      }
     
-    // } catch (error) {
-    //   console.error('Login failed', error);
-    // }
+    } catch (error) {
+      console.error('Login failed', error);
+    }
   };
 
   return (
