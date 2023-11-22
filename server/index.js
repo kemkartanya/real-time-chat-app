@@ -82,3 +82,15 @@ if (cluster.isPrimary) {
     console.log(`server running at http://localhost:${port}`);
   });
 }
+
+// database connection
+try {
+  mongoose.connect(process.env.MONGO_URL, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
+
+  console.log('MongoDB database is connected')
+} catch(err) {
+  console.log('MongoDB database connection failed')
+}
