@@ -5,6 +5,14 @@ const Chat = () => {
   const [message, setMessage] = useState("");
   const [messageList, setMessageList] = useState([]);
   const username = sessionStorage.getItem('username');
+  let counter = 0;
+  const socket = io({
+    ackTimeout: 10000,
+    retries: 3,
+    auth: {
+      serverOffset: 0
+    }
+  });
 
   const handleInputChange = (e) => {
     setMessage(e.target.value);
@@ -44,6 +52,20 @@ const Chat = () => {
       console.error('Login failed', error);
     }
 
+    if (input.value) {
+      const clientOffset = `${socket.id}-${counter++}`;
+      socket.emit('chat message', input.value, clientOffset);
+      input.value = '';
+    }
+
+    socket.on('chat message', (msg, serverOffset) => {
+      const item = document.createElement('li');
+      item.textContent = msg;
+      messages.appendChild(item);
+      window.scrollTo(0, document.body.scrollHeight);
+      socket.auth.serverOffset = serverOffset;
+    });
+
     setMessage("");
     console.log(message);
   };
@@ -72,6 +94,9 @@ const Chat = () => {
     fetchData(); 
 
   }, [message]);
+
+  
+
 
   return (
     <div>
