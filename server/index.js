@@ -13,6 +13,7 @@ import mongoose from 'mongoose'
 import dotenv from 'dotenv'
 import bodyParser from 'body-parser'
 import authRoute from './Routes/auth.js'  // login & register 
+import messRoute from './Routes/message.js'
 
 // Set up Global configuration access
 dotenv.config()
@@ -39,6 +40,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(cors(corsOptions));
 app.use('/auth', authRoute);  //authentication login registern
+app.use('/mess', messRoute);
 
 // Start the server
 app.listen(port, () => {

@@ -1,7 +1,9 @@
 import React, { useState } from 'react'
 import axios from 'axios';
+import { useNavigate } from "react-router-dom";
 
 const Login = () => {
+  const navigate = useNavigate();
 
   const [userData, setUserData] = useState({
     username: "",
@@ -28,9 +30,12 @@ const Login = () => {
 
       if (data) {
         console.log(data);
+        
         sessionStorage.setItem('token', data.token)
         sessionStorage.setItem('id', data.data._id)
-        window.location.href = '/chat'
+        sessionStorage.setItem('username', data.data.username)
+        
+        navigate("/chat");
       } else {
         alert('Please check your username and password')
       }
