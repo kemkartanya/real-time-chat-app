@@ -30,7 +30,7 @@ const Chat = () => {
     const handleReceivedMessage = (msg) => {
       setMessageList((prevMessages) => [...prevMessages, msg]);
       console.log(messageList);
-      window.scrollTo(0, document.body.scrollHeight);
+      // window.scrollTo(0, document.body.scrollHeight);
       socket.auth.serverOffset = message._id;
     };
     
@@ -64,28 +64,36 @@ const Chat = () => {
   };
 
   return (
-    <div>
-      <ul id="messages">
-        {messageList.map((item, index) => (
-          <li key={uuidv4()} className='flex'>
-            {item.username && <div className='italic mr-2'>{item.username}:</div>}
-            <div>{item.content}</div>
-          </li>
-        ))}
-      </ul>
-      <form id="form" onSubmit={handleInput}>
-        <input
-          name="message"
-          type="text"
-          placeholder="Write your message"
-          id="input"
-          value={message}
-          onChange={handleInputChange}
-          autoComplete="off"
-        />
-        <button type="submit">Send</button>
-      </form>
-    </div>
+    <div className='flex'>
+      <div className='md:w-1/4'>
+        <input id='search' className='md:m-5 md:p-3 m-2 bg-black border rounded-xl' placeholder='search..' />
+        <div className='border-t'>
+
+        </div>
+      </div>
+      <div className='md:w-3/4'>
+        <ul id="messages" className='h-screen overflow-y-auto'>
+          {messageList.map((item, index) => (
+            <li key={uuidv4()} className='flex'>
+              {item.username && <div className='italic mr-2'>{item.username}:</div>}
+              <div>{item.content}</div>
+            </li>
+          ))}
+        </ul>
+        <form id="form" onSubmit={handleInput}>
+          <input
+            name="message"
+            type="text"
+            placeholder="Write your message"
+            id="input"
+            value={message}
+            onChange={handleInputChange}
+            autoComplete="off"
+          />
+          <button type="submit">Send</button>
+        </form>
+      </div>
+    </div>  
   );
 };
 
