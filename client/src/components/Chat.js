@@ -33,9 +33,11 @@ const Chat = () => {
       window.scrollTo(0, document.body.scrollHeight);
       socket.auth.serverOffset = message._id;
     };
-
-    socket.on('chat message', handleReceivedMessage);
-
+    
+    if(username) {
+      socket.on('chat message', handleReceivedMessage);
+    }
+      
     return () => {
       socket.off('chat message', handleReceivedMessage);
     };

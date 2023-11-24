@@ -57,7 +57,6 @@ io.on('connection', (socket) => {
 function handleSocketConnection(socket) {
   socket.on('chat message', async (msg, username) => {
     try {
-      console.log('insid', msg);
       const message = new Message({ content: msg, username: username });
       const savedMessage = await message.save();
       io.emit('chat message', savedMessage);

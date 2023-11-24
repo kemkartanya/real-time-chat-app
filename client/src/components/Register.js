@@ -2,46 +2,41 @@ import React, { useState } from 'react'
 import axios from 'axios';
 import { useNavigate } from "react-router-dom";
 
-const Login = () => {
-  const navigate = useNavigate();
+const Register = () => {
+    const navigate = useNavigate();
 
-  const [userData, setUserData] = useState({
-    username: "",
-    password: "",
-  })
+    const [userData, setUserData] = useState({
+        username: "",
+        password: "",
+    })
 
-  const handleInputChange = (e) => {
-    setUserData({ ...userData, [e.target.name]: e.target.value });
-  };
+    const handleInputChange = (e) => {
+        setUserData({ ...userData, [e.target.name]: e.target.value });
+    };
 
-  // login api call
-  const handleLogin = async (e) => {
-    e.preventDefault();
+    // login api call
+    const handleLogin = async (e) => {
+        e.preventDefault();
 
-    try {
-      const response = await axios.post(
-        'http://localhost:8000/auth/login',
-        userData // Pass the formData object directly
-      );
-    
-      const data = await response.data
-
-      if (data) {
-        console.log(data);
-        sessionStorage.clear();
-        sessionStorage.setItem('token', data.token)
-        sessionStorage.setItem('id', data.data._id)
-        sessionStorage.setItem('username', data.data.username)
+        try {
+        const response = await axios.post(
+            'http://localhost:8000/auth/register',
+            userData // Pass the formData object directly
+        );
         
-        navigate("/chat");
-      } else {
-        alert('Please check your username and password')
-      }
-    
-    } catch (error) {
-      console.error('Login failed', error);
-    }
-  };
+        const data = await response.data
+
+        if (data) {
+            console.log(data);            
+            navigate("/");
+        } else {
+            alert('Please check your username and password')
+        }
+        
+        } catch (error) {
+        console.error('Signup failed', error);
+        }
+    };
 
   return (
     <div align='center' className='p-12'>
@@ -74,14 +69,14 @@ const Login = () => {
         <button 
         onClick={handleLogin}
         className='m-5 p-3 bg-white text-black rounded-xl md:w-1/3 w-[200px]'
-        type='submit'>Login</button>
+        type='submit'>Signup</button>
               
         <br />
-        <a href='/register' className='underline'>Haven't registered?</a>
+        <a href='/' className='underline'>Already have account?</a>
       </form>
 
     </div>
   )
 }
 
-export default Login
+export default Register

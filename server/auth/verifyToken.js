@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken'
+import User from '../models/user.js'
 
 export const authenticate = async (req, res, next) => {
 
@@ -28,4 +29,22 @@ export const authenticate = async (req, res, next) => {
 
         return res.status(401).json({success: false, message: 'Invalid token', err});
     }
+}
+
+export const restrict = roles => async(req, res, next) => {
+    const userId = req.userId // token is used to find user & user.id & user.role 
+
+    let user;
+
+    const client = await User.findById(userId);
+
+    if(client) {
+        user = client
+    }
+
+    if(!roles.includes(user.role)) {
+        return res.status(401).json({success: false, message: "You're not authorized"})
+    }
+
+    next();
 }
