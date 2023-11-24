@@ -1,101 +1,93 @@
 import express from 'express';
-import { createServer } from 'node:http';
+import { createServer } from 'http';
 import { Server } from 'socket.io';
-import { availableParallelism } from 'node:os';
-import cluster from 'node:cluster';
-import { createAdapter, setupPrimary } from '@socket.io/cluster-adapter';
-import axios from 'axios'
-import cookieParser from 'cookie-parser'
-import cors from 'cors'
-import mongoose from 'mongoose'
-import dotenv from 'dotenv'
-import bodyParser from 'body-parser'
-import authRoute from './Routes/auth.js'  // login & register 
-import messRoute from './Routes/message.js'
+import mongoose from 'mongoose';
+import bodyParser from 'body-parser';
+import cookieParser from 'cookie-parser';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import Message from './models/message.js';
+import authRoute from './Routes/auth.js';
+import messRoute from './Routes/message.js';
 
-// Set up Global configuration access
-dotenv.config()
-
-const app = express();
-const port = process.env.PORT || 3000;
-
-app.use(bodyParser.json());
-
-const corsOptions = {
-  origin:true
-};
+dotenv.config();
 
 // MongoDB Atlas database connection
-try {
-  mongoose.connect(process.env.MONGODB_URL);
-  console.log('MongoDB database is connected')
-} catch(err) {
-  console.log('MongoDB database connection failed')
-}
+mongoose.connect(process.env.MONGODB_URL);
+const db = mongoose.connection;
 
-// middleware
-app.use(express.json());
+db.on('error', (error) => {
+  console.error('MongoDB connection error:', error);
+  process.exit(1); // Exit the process on connection error
+});
+
+db.once('open', () => {
+  console.log('MongoDB database is connected');
+});
+
+// Middleware
+const app = express();
+app.use(bodyParser.json());
 app.use(cookieParser());
-app.use(cors(corsOptions));
-app.use('/auth', authRoute);  //authentication login registern
-app.use('/mess', messRoute);
+app.use(cors({ origin: true }));
+
+// Routes
+app.use('/auth', authRoute); // Authentication: login & register
+app.use('/mess', messRoute); // Message route
 
 // Start the server
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
-
-// Define a GET route
-app.get('/', (req, res) => {
-  res.send('Api is working, namaste world')
-});
-
-if (cluster.isPrimary) {
-  const numCPUs = availableParallelism();
-  for (let i = 0; i < numCPUs; i++) {
-    cluster.fork({
-      PORT: 3000 + i
-    });
+const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: '*',
   }
+  }, {
+  connectionStateRecovery: (socket) => {
+    return {
+      serverOffset: socket.handshake.auth.serverOffset || 0
+    };
+  }
+});
 
-  setupPrimary();
-} else {
+io.on('connection', (socket) => {
+  console.log(socket);
+    handleSocketConnection(socket);
+})
 
-  const server = createServer(app);
-  const io = new Server(server, {
-    connectionStateRecovery: {},
-    adapter: createAdapter()
-  });
-
-  io.on('connection', async (socket) => {
-    socket.on('chat message', async (msg, clientOffset, callback) => {
-      let result;
-      try {
-        result = await db.run('INSERT INTO messages (content, client_offset) VALUES (?, ?)', msg, clientOffset);
-      } catch (e) {
-        if (e.errno === 19 /* SQLITE_CONSTRAINT */ ) {
-          callback();
-        } else {
-          // nothing to do, just let the client retry
-        }
-        return;
-      }
-      io.emit('chat message', msg, result.lastID);
-      callback();
-    });
-
-    if (!socket.recovered) {
-      try {
-        await db.each('SELECT id, content FROM messages WHERE id > ?',
-          [socket.handshake.auth.serverOffset || 0],
-          (_err, row) => {
-            socket.emit('chat message', row.content, row.id);
-          }
-        )
-      } catch (e) {
-        // something went wrong
-      }
+function handleSocketConnection(socket) {
+  socket.on('chat message', async (msg, username) => {
+    try {
+      console.log('insid', msg);
+      const message = new Message({ content: msg, username: username });
+      const savedMessage = await message.save();
+      io.emit('chat message', savedMessage);
+      // callback();
+    } catch (e) {
+      console.error(e);
+      // callback(e);
     }
   });
 
+  if (!socket.recovered) {
+    console.log('recovered');
+    handleSocketRecovery(socket);
+  }
 }
+
+async function handleSocketRecovery(socket) {
+  try {
+    // const messages = await Message.find({ _id: { $gt: socket.handshake.auth.serverOffset || 0 } });
+    const messages = await Message.find({});
+    messages.forEach((message) => {
+      console.log(message);
+      socket.emit('chat message', message);
+    });
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+const port = process.env.PORT || 3000;
+server.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});

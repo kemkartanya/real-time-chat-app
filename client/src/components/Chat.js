@@ -1,22 +1,49 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios'
+import { io } from 'socket.io-client';
+import { v4 as uuidv4 } from 'uuid';
 
 const Chat = () => {
+  const username = sessionStorage.getItem('username');
   const [message, setMessage] = useState("");
   const [messageList, setMessageList] = useState([]);
-  const username = sessionStorage.getItem('username');
-  let counter = 0;
-  const socket = io({
-    ackTimeout: 10000,
-    retries: 3,
+  const socket = io('http://localhost:8000', {
+    // ackTimeout: 10000,
+    // retries: 3,
     auth: {
       serverOffset: 0
     }
   });
 
+  socket.on('connect', () => {
+    // console.log(socket.id);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Disconnected from server');
+  });
+  
+  socket.on('connect_error', (error) => {
+    console.error('Connection error:', error);
+  });
+
+  useEffect(() => {
+    const handleReceivedMessage = (msg) => {
+      setMessageList((prevMessages) => [...prevMessages, msg]);
+      console.log(messageList);
+      window.scrollTo(0, document.body.scrollHeight);
+      socket.auth.serverOffset = message._id;
+    };
+
+    socket.on('chat message', handleReceivedMessage);
+
+    return () => {
+      socket.off('chat message', handleReceivedMessage);
+    };
+  }, []);
+
   const handleInputChange = (e) => {
     setMessage(e.target.value);
-  };  
+  };
 
   const handleInput = async (e) => {
     e.preventDefault();
@@ -25,87 +52,22 @@ const Chat = () => {
       console.log("Empty Message");
       return;
     }
-    
-    // pushing message to database
-    try {
-      const response = await axios.post(
-        'http://localhost:8000/mess/', {
-          username: username,
-          message: message,
-        },
-        {
-          headers: {
-            Authorization: 'Bearer ' + sessionStorage.getItem('token'),
-          },
-        }
-      );
-    
-      const data = await response.data;
 
-      if (data) {
-        console.log(data);
-      } else {
-        alert('Please check your username and password')
-      }
-    
-    } catch (error) {
-      console.error('Login failed', error);
-    }
-
-    if (input.value) {
-      const clientOffset = `${socket.id}-${counter++}`;
-      socket.emit('chat message', input.value, clientOffset);
-      input.value = '';
-    }
-
-    socket.on('chat message', (msg, serverOffset) => {
-      const item = document.createElement('li');
-      item.textContent = msg;
-      messages.appendChild(item);
-      window.scrollTo(0, document.body.scrollHeight);
-      socket.auth.serverOffset = serverOffset;
-    });
-
-    setMessage("");
     console.log(message);
+    const clientOffset = `${socket.id}-${uuidv4()}`;
+    console.log(clientOffset);
+    // socket.emit('chat message', message, clientOffset);
+    socket.emit('chat message', message, username);
+    setMessage("");
   };
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await axios.get('http://localhost:8000/mess/', {
-          headers: {
-            Authorization: 'Bearer ' + sessionStorage.getItem('token'),
-          },
-        });
-        const data = response.data;
-
-        if (data) {
-          setMessageList(data.data);
-          console.log(data);
-        } else {
-          alert('Error fetching data. Please check your request.');
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      }
-    };
-
-    fetchData(); 
-
-  }, [message]);
-
-  
-
 
   return (
     <div>
       <ul id="messages">
         {messageList.map((item, index) => (
-          <li key={index} className='flex'>
-            <div className='italic mr-2'>{item.username}:</div>
-            <div>{item.message}</div>
-            {/* <div className='italic ml-5'>{item.createdAt}</div> */}
+          <li key={uuidv4()} className='flex'>
+            {item.username && <div className='italic mr-2'>{item.username}:</div>}
+            <div>{item.content}</div>
           </li>
         ))}
       </ul>
