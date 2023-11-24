@@ -9,6 +9,7 @@ import dotenv from 'dotenv';
 import Message from './models/message.js';
 import authRoute from './Routes/auth.js';
 import messRoute from './Routes/message.js';
+import userRoute from './Routes/user.js'
 
 dotenv.config();
 
@@ -34,6 +35,7 @@ app.use(cors({ origin: true }));
 // Routes
 app.use('/auth', authRoute); // Authentication: login & register
 app.use('/mess', messRoute); // Message route
+app.use('/users', userRoute);
 
 // Start the server
 const server = createServer(app);
@@ -50,7 +52,7 @@ const io = new Server(server, {
 });
 
 io.on('connection', (socket) => {
-  console.log(socket);
+    console.log(socket);
     handleSocketConnection(socket);
 })
 
@@ -65,6 +67,15 @@ function handleSocketConnection(socket) {
       console.error(e);
       // callback(e);
     }
+  });
+
+  socket.on('private message', (data) => {
+    const { to, message } = data;
+
+    io.to(to).emit('private message', {
+      from: socket.id,
+      message,
+    });
   });
 
   if (!socket.recovered) {

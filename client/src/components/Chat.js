@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import { v4 as uuidv4 } from 'uuid';
+import axios from 'axios'
 
 const Chat = () => {
   const username = sessionStorage.getItem('username');
+  const token = sessionStorage.getItem('token');
   const [message, setMessage] = useState("");
   const [messageList, setMessageList] = useState([]);
+  const [userList, setUserList] = useState([]);
   const socket = io('http://localhost:8000', {
     // ackTimeout: 10000,
     // retries: 3,
@@ -27,6 +30,7 @@ const Chat = () => {
   });
 
   useEffect(() => {
+    getUsers();
     const handleReceivedMessage = (msg) => {
       setMessageList((prevMessages) => [...prevMessages, msg]);
       console.log(messageList);
@@ -37,6 +41,17 @@ const Chat = () => {
     if(username) {
       socket.on('chat message', handleReceivedMessage);
     }
+
+    socket.on('private message', (data) => {
+      const { from, message } = data;
+    
+      console.log(`Received private message from ${from}: ${message}`);
+    });
+    
+    socket.emit('private message', {
+      to: 'socket-id-of-recipient',
+      message: 'This is a private message.',
+    });
       
     return () => {
       socket.off('chat message', handleReceivedMessage);
@@ -63,15 +78,42 @@ const Chat = () => {
     setMessage("");
   };
 
+  const getUsers = async () => {
+    try {
+      const response = await axios.get(
+        'http://localhost:8000/users/', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+      });
+
+      const data = await response.data
+
+      if (data) {
+        console.log(data.data);
+        setUserList(data.data);
+      } else {
+        alert('Please check your username and password')
+      }
+    
+    } catch (error) {
+      console.error('could not get users', error);
+    }
+  }
+
   return (
     <div className='flex'>
-      <div className='md:w-1/4'>
+      <div className='md:w-1/5'>
         <input id='search' className='md:m-5 md:p-3 m-2 bg-black border rounded-xl' placeholder='search..' />
         <div className='border-t'>
-
+        {userList.map((user, index) => (
+          <div key={index} className='bg-[#800080] m-2 rounded-2xl p-3 px-10'>
+            <div>{user.username}</div> 
+          </div>
+        ))}
         </div>
       </div>
-      <div className='md:w-3/4'>
+      <div className='md:w-4/5'>
         <ul id="messages" className='h-screen overflow-y-auto'>
           {messageList.map((item, index) => (
             <li key={uuidv4()} className='flex'>
