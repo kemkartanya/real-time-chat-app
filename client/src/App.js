@@ -1,28 +1,15 @@
 import './App.css';
-import {
-  Route,
-  createBrowserRouter,
-  createRoutesFromElements,
-  RouterProvider,
-} from "react-router-dom";
-import Login from './components/Login';
-import Chat from './components/Chat';
-import Register from './components/Register';
-
-const router = createBrowserRouter(
-  createRoutesFromElements(
-    <Route>
-      <Route path="/" element={<Login />} />
-      <Route path='/register' element={<Register />} />
-      <Route path="/chat" element={<Chat />} />
-    </Route>
-  )
-);
+import { Route, Routes } from "react-router-dom";
+import Home from './pages/Home';
+import Chat from './pages/Chat';
 
 function App() {
   return (
     <div className="App h-screen w-screen bg-black text-white">
-      <RouterProvider router={router} />
+      <Routes>
+        <Route path='/' element={<Home />} />
+        <Route path='/chat' element={<Chat />} />
+      </Routes>
     </div>
   );
 }

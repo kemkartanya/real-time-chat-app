@@ -1,56 +1,87 @@
-import User from '../models/user.js';
+import asyncHandler from "express-async-handler";
+import User from "../models/user.js";
+import generateToken from "../config/generateToken.js";
 
-export const updateUser = async(req, res) => {
-    const id = req.params.id
+//@description     Get or Search all users
+//@route           GET /api/user?search=
+//@access          Public
+const allUsers = asyncHandler(async (req, res) => {
+  const keyword = req.query.search
+    ? {
+        $or: [
+          { name: { $regex: req.query.search, $options: "i" } },
+          { email: { $regex: req.query.search, $options: "i" } },
+        ],
+      }
+    : {};
 
-    try {
-        
-        const updateUser = await User.findByIdAndUpdate(id, {$set: req.body}, {new: true});
+  const users = await User.find(keyword).find({ _id: { $ne: req.user._id } });
+  res.send(users);
+});
 
-        res.status(200).json({success: true, message: 'Successfully updated', data: updateUser});
+//@description     Register new user
+//@route           POST /api/user/
+//@access          Public
+const registerUser = asyncHandler(async (req, res) => {
+  const { name, email, password, pic } = req.body;
 
-    } catch (err) {
-        res.status(500).json({success: false, message: 'failed to update', });
-    }
-};
+  if (!name || !email || !password) {
+    res.status(400);
+    throw new Error("Please Enter all the Feilds");
+  }
 
-export const deleteUser = async(req, res) => {
-    const id = req.params.id
+  const userExists = await User.findOne({ email });
 
-    try {
-        
-        await User.findByIdAndDelete(id, );
+  if (userExists) {
+    res.status(400);
+    throw new Error("User already exists");
+  }
 
-        res.status(200).json({success: true, message: 'Successfully deleted', });
+  const user = await User.create({
+    name,
+    email,
+    password,
+    pic,
+  });
 
-    } catch (err) {
-        res.status(500).json({success: false, message: 'failed to delete', });
-    }
-};
+  console.log(user._id);
 
-export const getSingleUser = async(req, res) => {
-    const id = req.params.id
+  if (user) {
+    res.status(201).json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      isAdmin: user.isAdmin,
+      pic: user.pic,
+      token: generateToken(user._id),
+    });
+  } else {
+    res.status(400);
+    throw new Error("User not found");
+  }
+});
 
-    try {
-        
-        const user = await User.findById(id, ).select("-password");
+//@description     Auth the user
+//@route           POST /api/users/login
+//@access          Public
+const authUser = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
 
-        res.status(200).json({success: true, message: 'User found', data: user});
+  const user = await User.findOne({ email });
 
-    } catch (err) {
-        res.status(404).json({success: false, message: 'No user found', error: err});
-    }
-};
+  if (user && (await user.matchPassword(password))) {
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      isAdmin: user.isAdmin,
+      pic: user.pic,
+      token: generateToken(user._id),
+    });
+  } else {
+    res.status(401);
+    throw new Error("Invalid Email or Password");
+  }
+});
 
-export const getAllUser = async(req, res) => {
-
-    try {
-        
-        const users = await User.find({}).select("-password");
-
-        res.status(200).json({success: true, message: 'Users found', data: users});
-
-    } catch (err) {
-        res.status(404).json({success: false, message: 'Not found', error: err});
-    }
-};
+export { allUsers, registerUser, authUser };

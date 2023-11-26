@@ -1,94 +1,57 @@
-import Message from '../models/message.js';
+import asyncHandler from "express-async-handler";
+import Chat from "../models/chat.js";
+import User from "../models/user.js";
+import Message from "../models/message.js";
 
-export const updateMessage = async(req, res) => {
-    const id = req.params.id
+//@description     Get all Messages
+//@route           GET /api/Message/:chatId
+//@access          Protected
+const allMessages = asyncHandler(async (req, res) => {
+  try {
+    const messages = await Message.find({ chat: req.params.chatId })
+      .populate("sender", "name pic email")
+      .populate("chat");
+    res.json(messages);
+  } catch (error) {
+    res.status(400);
+    throw new Error(error.message);
+  }
+});
 
-    try {
-        
-        const updateMessage = await Event.findByIdAndUpdate(id, {$set: req.body}, {new: true});
+//@description     Create New Message
+//@route           POST /api/Message/
+//@access          Protected
+const sendMessage = asyncHandler(async (req, res) => {
+  const { content, chatId } = req.body;
 
-        res.status(200).json({success: true, message: 'Successfully updated', data: updateMessage});
+  if (!content || !chatId) {
+    console.log("Invalid data passed into request");
+    return res.sendStatus(400);
+  }
 
-    } catch (err) {
-        res.status(500).json({success: false, message: 'failed to update', });
-    }
-};
+  var newMessage = {
+    sender: req.user._id,
+    content: content,
+    chat: chatId,
+  };
 
-export const deleteMessage = async(req, res) => {
-    const id = req.params.id
+  try {
+    var message = await Message.create(newMessage);
 
-    try {
-        
-        await Message.findByIdAndDelete(id, );
+    message = await message.populate("sender", "name pic").execPopulate();
+    message = await message.populate("chat").execPopulate();
+    message = await User.populate(message, {
+      path: "chat.users",
+      select: "name pic email",
+    });
 
-        res.status(200).json({success: true, message: 'Successfully deleted', });
+    await Chat.findByIdAndUpdate(req.body.chatId, { latestMessage: message });
 
-    } catch (err) {
-        res.status(500).json({success: false, message: 'failed to delete', });
-    }
-};
+    res.json(message);
+  } catch (error) {
+    res.status(400);
+    throw new Error(error.message);
+  }
+});
 
-export const getSingleMessage = async(req, res) => {
-    const id = req.params.id
-
-    try {       
-        const message = await Event.findById(id, );
-
-        res.status(200).json({success: true, message: 'Message found', data: message});
-
-    } catch (err) {
-        res.status(404).json({success: false, message: 'No message found', });
-    }
-};
-
-export const getAllMessage = async(req, res) => {
-
-    try {       
-        const messages = await Message.find({});
-
-        res.status(200).json({success: true, message: 'Messages found', data: messages});
-
-    } catch (err) {
-        res.status(404).json({success: false, message: 'Not found', err});
-    }
-};
-
-export const getUserMessage = async(req, res) => {
-
-    const userId = req.params.userId;
-
-    try {
-        const userMessage = await Message.find({userId: userId});
-
-        res.status(200).json({success: true, message: 'User Messages found', data: userMessage});
-
-    } catch (err) {
-        res.status(404).json({success: false, message: "Not found", });
-    }
-};
-
-export const createMessage = async (req, res) => {
-    const { username, message, } = req.body;
-
-    try {
-        // let message = null;
-
-        // event = await Message.findOne({message, username});
-
-        // check if destination exist
-        // if(event) {
-        //     return res.status(400).json({message: 'Event already exist'})
-        // }
-
-        const newMessage = new Message({
-            username,
-            message,
-        });
-
-        await newMessage.save();
-
-        res.status(201).json({ success: true, message: 'Message created successfully', data: newMessage, });   
-    } catch (err) {
-        res.status(400).json({ success: false, message: 'Failed to create event', error: err.message, });
-    }
-};
+export { allMessages, sendMessage };

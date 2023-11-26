@@ -1,103 +1,40 @@
 import express from 'express';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
+import dotenv from 'dotenv'
 import mongoose from 'mongoose';
-import bodyParser from 'body-parser';
-import cookieParser from 'cookie-parser';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import Message from './models/message.js';
-import authRoute from './Routes/auth.js';
-import messRoute from './Routes/message.js';
-import userRoute from './Routes/user.js'
+import userRoutes from "./Routes/user.js";
+import chatRoutes from "./Routes/chat.js";
+import messageRoutes from "./Routes/message.js";
+import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 
 dotenv.config();
 
-// MongoDB Atlas database connection
-mongoose.connect(process.env.MONGODB_URL);
-const db = mongoose.connection;
+try {
+  const conn = await mongoose.connect(process.env.MONGODB_URL, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+  });
 
-db.on('error', (error) => {
-  console.error('MongoDB connection error:', error);
-  process.exit(1); // Exit the process on connection error
-});
+  console.log(`MongoDB Connected: ${conn.connection.host}`)
+} catch (error) {
+  console.log(`Error: ${error.message}`);
+  process.exit();
+}
 
-db.once('open', () => {
-  console.log('MongoDB database is connected');
-});
-
-// Middleware
 const app = express();
-app.use(bodyParser.json());
-app.use(cookieParser());
-app.use(cors({ origin: true }));
+app.use(express.json());
 
-// Routes
-app.use('/auth', authRoute); // Authentication: login & register
-app.use('/mess', messRoute); // Message route
-app.use('/users', userRoute);
+app.use("/api/user", userRoutes);
+app.use("/api/chat", chatRoutes);
+app.use("/api/message", messageRoutes);
 
-// Start the server
-const server = createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: '*',
-  }
-  }, {
-  connectionStateRecovery: (socket) => {
-    return {
-      serverOffset: socket.handshake.auth.serverOffset || 0
-    };
-  }
-});
+// Error Handling middlewares
+app.use(notFound);
+app.use(errorHandler);
 
-io.on('connection', (socket) => {
-    console.log(socket);
-    handleSocketConnection(socket);
+app.get('/', (req, res) => {
+  res.send("API is running");
 })
 
-function handleSocketConnection(socket) {
-  socket.on('chat message', async (msg, username) => {
-    try {
-      const message = new Message({ content: msg, username: username });
-      const savedMessage = await message.save();
-      io.emit('chat message', savedMessage);
-      // callback();
-    } catch (e) {
-      console.error(e);
-      // callback(e);
-    }
-  });
+const PORT = process.env.PORT || 5000;
 
-  socket.on('private message', (data) => {
-    const { to, message } = data;
-
-    io.to(to).emit('private message', {
-      from: socket.id,
-      message,
-    });
-  });
-
-  if (!socket.recovered) {
-    console.log('recovered');
-    handleSocketRecovery(socket);
-  }
-}
-
-async function handleSocketRecovery(socket) {
-  try {
-    // const messages = await Message.find({ _id: { $gt: socket.handshake.auth.serverOffset || 0 } });
-    const messages = await Message.find({});
-    messages.forEach((message) => {
-      console.log(message);
-      socket.emit('chat message', message);
-    });
-  } catch (e) {
-    console.error(e);
-  }
-}
-
-const port = process.env.PORT || 3000;
-server.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
+app.listen(PORT, console.log(`Server started on port ${PORT}`))
