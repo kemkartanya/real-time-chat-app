@@ -29,6 +29,10 @@ app.use("/api/user", userRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/message", messageRoutes);
 
+app.get("/", (req, res) => {
+  res.send("API is running..");
+});
+
 // Error Handling middlewares
 app.use(notFound);
 app.use(errorHandler);
