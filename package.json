@@ -4,7 +4,8 @@
     "description": "my first socket.io app",
     "type": "module",
     "scripts": {
-        "dev": "nodemon index.js"
+        "dev": "nodemon index.js",
+        "build": "npm install --legacy-peer-deps && npm install --legacy-peer-deps --prefix client && npm run build --prefix client"
     },
     "dependencies": {
         "@socket.io/cluster-adapter": "^0.2.2",

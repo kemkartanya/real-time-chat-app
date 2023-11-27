@@ -6,6 +6,7 @@ import chatRoutes from "./Routes/chat.js";
 import messageRoutes from "./Routes/message.js";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 import { Server } from 'socket.io';
+import path from 'path'
 
 dotenv.config();
 
@@ -31,10 +32,6 @@ app.use("/api/message", messageRoutes);
 // Error Handling middlewares
 app.use(notFound);
 app.use(errorHandler);
-
-app.get('/', (req, res) => {
-  res.send("API is running");
-})
 
 const PORT = process.env.PORT || 5000;
 
